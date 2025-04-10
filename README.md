@@ -1,6 +1,6 @@
-# Nuxt Minimal Starter
+# Nuxt GAMES LIST
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+![BAD Preview](https://firebasestorage.googleapis.com/v0/b/protaguz.appspot.com/o/Screenshot%202025-04-10%20at%2021.54.28%20(2).png?alt=media&token=90fd8eb8-514c-4b11-a43e-baa523b5c0bf)
 
 ## Setup
 
@@ -20,56 +20,5 @@ yarn install
 bun install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
-```
-
-## Production
-
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
