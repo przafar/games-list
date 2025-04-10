@@ -1,6 +1,5 @@
-import { defineNuxtPlugin } from '#app'
 import { createPinia } from 'pinia'
 
-export default defineNuxtPlugin((nuxtApp) => {
+export default defineNuxtPlugin((nuxtApp: any) => {
   nuxtApp.vueApp.use(createPinia())
 })

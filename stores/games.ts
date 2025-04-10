@@ -1,127 +1,131 @@
-// stores/requests.ts
 import { defineStore } from 'pinia'
 import { ref, type Ref } from 'vue'
 
-export interface Request {
+export interface Game {
   id: string
-  title: string
-  children?: Request[]
+  name: string
+  order: number
+  subCategories?: string
+  children?: Game[]
 }
 
-export interface RequestsState {
-  requests: Request[]
-  undoStack: Request[][]  // история состояний списка
-  redoStack: Request[][]  // стек для повторения действий
+export interface GamesState {
+  games: Game[]
+  undoStack: Game[][]
+  redoStack: Game[][]
 }
 
-export const useRequestsStore = defineStore('requests', () => {
-  console.log('store initialized')
+export const useGamesStore = defineStore('games', () => {
+  const games: Ref<Game[]> = ref([])
+  const undoStack: Ref<Game[][]> = ref([])
+  const redoStack: Ref<Game[][]> = ref([])
 
-  // Начальное состояние: пустой список запросов, стеки undo/redo
-  const requests: Ref<Request[]> = ref([])
-  const undoStack: Ref<Request[][]> = ref([])
-  const redoStack: Ref<Request[][]> = ref([])
-
-  // Функция сохранения состояния в localStorage (только на клиенте)
-  const persistState = () => {
+  const persistState = (page: number) => {
     if (process.client) {
-      localStorage.setItem('requests', JSON.stringify(requests.value))
-      localStorage.setItem('undoStack', JSON.stringify(undoStack.value))
-      localStorage.setItem('redoStack', JSON.stringify(redoStack.value))
+      localStorage.setItem(`games_data_page_${page}`, JSON.stringify(games.value))
+      localStorage.setItem(`games_undo_page_${page}`, JSON.stringify(undoStack.value))
+      localStorage.setItem(`games_redo_page_${page}`, JSON.stringify(redoStack.value))
     }
   }
 
-  // Функция загрузки состояния из localStorage (только на клиенте)
-  const loadState = () => {
+  const loadState = (page: number) => {
     if (process.client) {
-      const storedRequests = localStorage.getItem('requests')
-      const storedUndo = localStorage.getItem('undoStack')
-      const storedRedo = localStorage.getItem('redoStack')
-
-      if (storedRequests) {
-        requests.value = (JSON.parse(storedRequests) as Request[]) ?? []
+      const storedDataStr = localStorage.getItem(`games_data_page_${page}`)
+      const storedUndo = localStorage.getItem(`games_undo_page_${page}`)
+      const storedRedo = localStorage.getItem(`games_redo_page_${page}`)
+      if (storedDataStr) {
+        const storedGames = JSON.parse(storedDataStr)
+        if (!games.value.length || JSON.stringify(games.value) !== JSON.stringify(storedGames)) {
+          games.value = storedGames
+        }
       }
       if (storedUndo) {
-        undoStack.value = (JSON.parse(storedUndo) as Request[][]) ?? []
+        undoStack.value = JSON.parse(storedUndo) ?? []
       }
       if (storedRedo) {
-        redoStack.value = (JSON.parse(storedRedo) as Request[][]) ?? []
+        redoStack.value = JSON.parse(storedRedo) ?? []
       }
     }
   }
 
-  /**
-   * Функция перемещения запроса.
-   * Перемещает запрос с id draggedId в элемент с id targetId.
-   */
-  const moveRequest = (draggedId: string, targetId: string) => {
-    // Сохраняем текущее состояние для undo
-    undoStack.value.push(JSON.parse(JSON.stringify(requests.value)))
+  const pushUndoState = (page: number) => {
+    undoStack.value.push(JSON.parse(JSON.stringify(games.value)))
     if (undoStack.value.length > 20) {
       undoStack.value.shift()
     }
-    // Очищаем стек redo
     redoStack.value = []
-
-    // Рекурсивно ищем и удаляем запрос по id
-    function removeRequest(list: Request[], id: string): Request | null {
-      for (let i = 0; i < list.length; i++) {
-        if (list[i].id === id) {
-          return list.splice(i, 1)[0]
-        }
-        if (list[i].children) {
-          const child = removeRequest(list[i].children, id)
-          if (child) return child
-        }
-      }
-      return null
-    }
-
-    // Рекурсивно ищем целевой элемент для вставки запроса в его children
-    function insertRequest(list: Request[], targetId: string, req: Request): boolean {
-      for (const item of list) {
-        if (item.id === targetId) {
-          item.children = item.children || []
-          item.children.push(req)
-          return true
-        }
-        if (item.children && insertRequest(item.children, targetId, req)) {
-          return true
-        }
-      }
-      return false
-    }
-
-    const requestToMove = removeRequest(requests.value, draggedId)
-    if (requestToMove) {
-      if (!insertRequest(requests.value, targetId, requestToMove)) {
-        // Если не найден целевой элемент, добавляем запрос в конец списка
-        requests.value.push(requestToMove)
-      }
-    }
-    persistState()
+    persistState(page)
   }
 
-  const undo = () => {
+  const removeGameById = (list: Game[], id: string): Game | null => {
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].id === id) {
+        return list.splice(i, 1)[0]
+      }
+      if (list[i].children) {
+        const child = removeGameById(list[i].children, id)
+        if (child) return child
+      }
+    }
+    return null
+  }
+
+  const insertGame = (list: Game[], targetId: string, game: Game): boolean => {
+    for (const item of list) {
+      if (item.id === targetId) {
+        item.children = item.children || []
+        item.children.push(game)
+        return true
+      }
+      if (item.children && insertGame(item.children, targetId, game)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  const moveGame = (draggedId: string, targetId: string, page: number) => {
+    if (draggedId === targetId) return
+    pushUndoState(page)
+    const gameToMove = removeGameById(games.value, draggedId)
+    if (!gameToMove) {
+      persistState(page)
+      return
+    }
+    if (targetId === 'root') {
+      games.value.push(gameToMove)
+    } else if (!insertGame(games.value, targetId, gameToMove)) {
+      games.value.push(gameToMove)
+    }
+    persistState(page)
+  }
+
+  const undo = (page: number) => {
     if (!undoStack.value.length) return
-    // Сохраняем текущее состояние для redo
-    redoStack.value.push(JSON.parse(JSON.stringify(requests.value)))
+    redoStack.value.push(JSON.parse(JSON.stringify(games.value)))
     const previousState = undoStack.value.pop()
-    if (previousState) requests.value = previousState
-    persistState()
+    if (previousState) {
+      games.value = previousState
+    }
+    persistState(page)
   }
 
-  const redo = () => {
+  const redo = (page: number) => {
     if (!redoStack.value.length) return
-    // Сохраняем текущее состояние для undo
-    undoStack.value.push(JSON.parse(JSON.stringify(requests.value)))
+    undoStack.value.push(JSON.parse(JSON.stringify(games.value)))
     const nextState = redoStack.value.pop()
-    if (nextState) requests.value = nextState
-    persistState()
+    if (nextState) {
+      games.value = nextState
+    }
+    persistState(page)
   }
 
-  // Загружаем сохраненное состояние (если на клиенте)
-  loadState()
-
-  return { requests, moveRequest, undo, redo }
+  return {
+    games,
+    loadState,
+    persistState,
+    moveGame,
+    undo,
+    redo
+  }
 })
