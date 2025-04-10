@@ -14,6 +14,9 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'static'
   },
+  app: {
+    baseURL: '/games-list/'
+  },
   runtimeConfig: {
     public: {
       apiBase: '/api'
